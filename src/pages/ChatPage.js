@@ -97,21 +97,22 @@ const ChatPage = () => {
     }
   };
 
-  const handleSend = async () => {
-    // 1. Initial Checks
+const handleSend = async () => {
     if (!input.trim() || !selectedChat || !isPuterReady) return;
 
-    // Define messages and initial state update
     const userMessage = { id: uuidv4(), role: 'user', content: input };
-    // Start with a blank AI message
     const aiMessage = { id: uuidv4(), role: 'ai', content: '' };
     
+    // Create the history array for the API call BEFORE adding the blank aiMessage
+    // This is the clean history + the new user message
+    const historyForAPI = [...selectedChat.messages, userMessage];
+    
+    // Update local state and global chats with the new user message and the blank aiMessage
     const updatedChat = {
         ...selectedChat,
         messages: [...selectedChat.messages, userMessage, aiMessage],
     };
     
-    // Update local state and global chats immediately
     setChats(prevChats => 
         prevChats.map(chat => 
             chat.id === selectedChat.id ? updatedChat : chat
@@ -121,15 +122,9 @@ const ChatPage = () => {
     setInput('');
     setLoading(true);
 
-    // 2. Define Model and Options
-    const messagesToSend = selectedChat.messages.length > 0
-        ? [...selectedChat.messages, userMessage]
-        : [userMessage]; // Start conversation history with the new message
-        
     const options = {
         stream: true,
-        // 🎯 MODEL UPDATE: Using a powerful, modern model as requested
-        model: "claude-sonnet-4.5", 
+        model: "claude-sonnet-4-5", 
     };
 
     let fullResponse = '';
@@ -137,13 +132,12 @@ const ChatPage = () => {
     const errorMessage = 'Error: Unable to fetch response.';
 
     try {
-        // 3. Start Streaming
-        const responseStream = await window.puter.ai.chat(messagesToSend, options);
+        // 🎯 Use the clean history array for the API call
+        const responseStream = await window.puter.ai.chat(historyForAPI, options);
         
         for await (const part of responseStream) {
             fullResponse += part?.text || '';
             
-            // 🎯 ESLINT FIX: Safely update the state with the current accumulated response
             const currentFullResponse = fullResponse;
             
             setSelectedChat(prevChat => {
@@ -158,20 +152,19 @@ const ChatPage = () => {
             });
         }
         
-        // 4. Final Success State Update (Sets the final, non-streaming message in the full chat list)
+        // Final Success State Update (Sets the complete history in the chat list)
         setChats(prevChats =>
             prevChats.map(chat =>
                 chat.id === selectedChat.id
-                    ? { ...chat, messages: [...selectedChat.messages, userMessage, { ...aiMessage, content: fullResponse }] }
+                    ? { ...chat, messages: [...historyForAPI, { ...aiMessage, content: fullResponse }] }
                     : chat
             )
         );
 
     } catch (error) {
-        // 5. Error Handling
-        console.error('Puter AI Streaming Error:', error);
+        console.error('Puter API Fetch Error:', error);
         
-        // Update selected chat with error message
+        // Error handling logic remains the same (displays the "Unable to fetch response" message)
         setSelectedChat(prevChat => {
             const newMessages = [...prevChat.messages];
             const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
@@ -181,7 +174,6 @@ const ChatPage = () => {
             return { ...prevChat, messages: newMessages };
         });
 
-        // Update global chat list with error message
         setChats(prevChats =>
             prevChats.map(chat =>
                 chat.id === selectedChat.id
@@ -191,7 +183,6 @@ const ChatPage = () => {
         );
         
     } finally {
-        // 6. Final Cleanup
         setLoading(false);
         scrollToBottom();
     }
