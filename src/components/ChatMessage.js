@@ -8,7 +8,6 @@ export default function ChatMessage({ message }) {
     navigator.clipboard.writeText(message.content);
   };
 
-  // 🎯 FIX: Define the new assistant role for clean code
   const isAssistant = message.role === 'assistant';
 
   return (
@@ -20,7 +19,6 @@ export default function ChatMessage({ message }) {
       <Box
         sx={{
           display: 'flex',
-          // 🎯 FIX 1: Use isAssistant for justification
           justifyContent: isAssistant ? 'flex-start' : 'flex-end', 
           mb: 1,
           mx: { xs: 1, sm: 2 },
@@ -31,9 +29,7 @@ export default function ChatMessage({ message }) {
           sx={{
             maxWidth: '75%',
             position: 'relative',
-            // 🎯 FIX 2: Use isAssistant for background color
             backgroundColor: isAssistant ? '#f0f0f0' : '#0084ff', 
-            // 🎯 FIX 3: Use isAssistant for text color
             color: isAssistant ? '#000' : '#fff', 
             borderRadius: '18px',
             px: 2,
@@ -45,13 +41,10 @@ export default function ChatMessage({ message }) {
               content: '""',
               position: 'absolute',
               bottom: 0,
-              // 🎯 FIX 4: Use isAssistant for positioning the tail
               [isAssistant ? 'left' : 'right']: -8, 
               borderStyle: 'solid',
               borderWidth: '10px 0 0 10px',
-              // 🎯 FIX 5: Use isAssistant for tail color
               borderColor: `transparent transparent transparent ${isAssistant ? '#f0f0f0' : '#0084ff'}`, 
-              // 🎯 FIX 6: Use isAssistant for flipping the tail
               transform: isAssistant ? 'none' : 'scaleX(-1)', 
             },
           }}
@@ -78,9 +71,8 @@ export default function ChatMessage({ message }) {
         </Box>
       </Box>
     </motion.div>
-  );
-}
-      </Box>
+  ); // <--- This is the FINAL closing return character
+} // <--- This is the FINAL closing brace for the function
     </motion.div>
   );
 }
