@@ -129,7 +129,7 @@ const ChatPage = () => {
     const options = {
         stream: true,
         // 🎯 MODEL UPDATE: Using a powerful, modern model as requested
-        model: "claude-opus-4.5", 
+        model: "claude-sonnet-4.5", 
     };
 
     let fullResponse = '';
