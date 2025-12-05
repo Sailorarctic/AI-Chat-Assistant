@@ -98,13 +98,14 @@ const ChatPage = () => {
   };
 
 const handleSend = async () => {
+    // Check for necessary components and input
     if (!input.trim() || !selectedChat || !isPuterReady) return;
 
+    // Define messages, ensuring the AI role is 'assistant' for API compatibility
     const userMessage = { id: uuidv4(), role: 'user', content: input };
-    const aiMessage = { id: uuidv4(), role: 'ai', content: '' };
+    const aiMessage = { id: uuidv4(), role: 'assistant', content: '' }; // 🎯 FIX: Changed 'ai' to 'assistant'
     
-    // Create the history array for the API call BEFORE adding the blank aiMessage
-    // This is the clean history + the new user message
+    // Create the history array for the API call (clean history + new user message)
     const historyForAPI = [...selectedChat.messages, userMessage];
     
     // Update local state and global chats with the new user message and the blank aiMessage
@@ -132,7 +133,7 @@ const handleSend = async () => {
     const errorMessage = 'Error: Unable to fetch response.';
 
     try {
-        // 🎯 Use the clean history array for the API call
+        // Use the clean history array for the API call
         const responseStream = await window.puter.ai.chat(historyForAPI, options);
         
         for await (const part of responseStream) {
@@ -152,7 +153,7 @@ const handleSend = async () => {
             });
         }
         
-        // Final Success State Update (Sets the complete history in the chat list)
+        // Final Success State Update
         setChats(prevChats =>
             prevChats.map(chat =>
                 chat.id === selectedChat.id
@@ -164,12 +165,13 @@ const handleSend = async () => {
     } catch (error) {
         console.error('Puter API Fetch Error:', error);
         
-        // Error handling logic remains the same (displays the "Unable to fetch response" message)
+        // Error handling logic
         setSelectedChat(prevChat => {
             const newMessages = [...prevChat.messages];
             const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
             if (aiMsgIndex !== -1) {
-                newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: errorMessage };
+                // Ensure the error message also uses the 'assistant' role for consistency if displayed
+                newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], role: 'assistant', content: errorMessage };
             }
             return { ...prevChat, messages: newMessages };
         });
@@ -177,7 +179,7 @@ const handleSend = async () => {
         setChats(prevChats =>
             prevChats.map(chat =>
                 chat.id === selectedChat.id
-                    ? { ...chat, messages: [...selectedChat.messages.slice(0, -1), { ...aiMessage, content: errorMessage }] }
+                    ? { ...chat, messages: [...selectedChat.messages.slice(0, -1), { ...aiMessage, role: 'assistant', content: errorMessage }] }
                     : chat
             )
         );
