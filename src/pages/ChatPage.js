@@ -125,17 +125,28 @@ const ChatPage = () => {
     try {
       const responseStream = await window.puter.ai.chat(input, options);
       let fullResponse = '';
+for await (const part of responseStream) {
+    // 1. Accumulate the full response in the local variable (safe)
+    fullResponse += part?.text || '';
+    
+    // 2. Capture the current full response and the message ID into stable, 
+    //    block-scoped variables for the closure, fixing the ESLint error.
+    const currentFullResponse = fullResponse; 
+    const aiMessageId = aiMessage.id; 
 
-      for await (const part of responseStream) {
-        fullResponse += part?.text || '';
-        setSelectedChat(prevChat => {
-          const newMessages = [...prevChat.messages];
-          const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessage.id);
-          if (aiMsgIndex !== -1) {
-            newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: fullResponse };
-          }
-          return { ...prevChat, messages: newMessages };
-        });
+    setSelectedChat(prevChat => {
+        const newMessages = [...prevChat.messages];
+        const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
+        
+        if (aiMsgIndex !== -1) {
+            // The function now safely uses the stable currentFullResponse value.
+            newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
+        }
+        
+        // Return the full new state object
+        return { ...prevChat, messages: newMessages };
+    });
+}
         
         setChats(prevChats =>
           prevChats.map(chat =>
