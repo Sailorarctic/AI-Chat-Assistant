@@ -1,6 +1,6 @@
 {
   "name": "19app",
-  "homepage": "https://Sailorarctic.github.io/AI-Chat-Assistant",
+  "homepage": "/",  
   "version": "0.1.0",
   "private": true,
   "dependencies": {
@@ -26,7 +26,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "PUBLIC_URL=/ react-scripts build", 
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
