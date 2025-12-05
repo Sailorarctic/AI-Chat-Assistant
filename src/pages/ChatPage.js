@@ -143,7 +143,7 @@ const handleSend = async () => {
         const responseStream = await window.puter.ai.chat(historyForAPI, options);
         
         for await (const part of responseStream) {
-            fullResponse += part?.text || '';
+            fullResponse += part;
             const currentFullResponse = fullResponse;
             
             // Streaming update logic
