@@ -98,106 +98,104 @@ const ChatPage = () => {
   };
 
   const handleSend = async () => {
+    // 1. Initial Checks
     if (!input.trim() || !selectedChat || !isPuterReady) return;
 
+    // Define messages and initial state update
     const userMessage = { id: uuidv4(), role: 'user', content: input };
+    // Start with a blank AI message
     const aiMessage = { id: uuidv4(), role: 'ai', content: '' };
     
     const updatedChat = {
-      ...selectedChat,
-      messages: [...selectedChat.messages, userMessage, aiMessage],
+        ...selectedChat,
+        messages: [...selectedChat.messages, userMessage, aiMessage],
     };
     
+    // Update local state and global chats immediately
     setChats(prevChats => 
-      prevChats.map(chat => 
-        chat.id === selectedChat.id ? updatedChat : chat
-      )
+        prevChats.map(chat => 
+            chat.id === selectedChat.id ? updatedChat : chat
+        )
     );
     setSelectedChat(updatedChat);
     setInput('');
     setLoading(true);
 
+    // 2. Define Model and Options
+    const messagesToSend = selectedChat.messages.length > 0
+        ? [...selectedChat.messages, userMessage]
+        : [userMessage]; // Start conversation history with the new message
+        
     const options = {
-      stream: true,
-      model: model === 'model1' ? 'claude-3-5-sonnet' : undefined,
+        stream: true,
+        // 🎯 MODEL UPDATE: Using a powerful, modern model as requested
+        model: "claude-opus-4.5", 
     };
 
-   try {
-    const responseStream = await window.puter.ai.chat(input, options); // Assumes 'input' and 'options' variables are defined elsewhere
     let fullResponse = '';
-    
-    for await (const part of responseStream) {
-        // 1. Accumulate the full response in the local variable (safe)
-        fullResponse += part?.text || '';
-        
-        // 2. Capture the current full response and the message ID into stable, 
-        //    block-scoped variables for the closure, fixing the ESLint error.
-        const currentFullResponse = fullResponse; 
-        const aiMessageId = aiMessage.id; 
+    const aiMessageId = aiMessage.id;
+    const errorMessage = 'Error: Unable to fetch response.';
 
+    try {
+        // 3. Start Streaming
+        const responseStream = await window.puter.ai.chat(messagesToSend, options);
+        
+        for await (const part of responseStream) {
+            fullResponse += part?.text || '';
+            
+            // 🎯 ESLINT FIX: Safely update the state with the current accumulated response
+            const currentFullResponse = fullResponse;
+            
+            setSelectedChat(prevChat => {
+                const newMessages = [...prevChat.messages];
+                const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
+                
+                if (aiMsgIndex !== -1) {
+                    newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
+                }
+                
+                return { ...prevChat, messages: newMessages };
+            });
+        }
+        
+        // 4. Final Success State Update (Sets the final, non-streaming message in the full chat list)
+        setChats(prevChats =>
+            prevChats.map(chat =>
+                chat.id === selectedChat.id
+                    ? { ...chat, messages: [...selectedChat.messages, userMessage, { ...aiMessage, content: fullResponse }] }
+                    : chat
+            )
+        );
+
+    } catch (error) {
+        // 5. Error Handling
+        console.error('Puter AI Streaming Error:', error);
+        
+        // Update selected chat with error message
         setSelectedChat(prevChat => {
             const newMessages = [...prevChat.messages];
             const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
-            
             if (aiMsgIndex !== -1) {
-                // The function now safely uses the stable currentFullResponse value.
-                newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
+                newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: errorMessage };
             }
-            
-            // Return the full new state object
             return { ...prevChat, messages: newMessages };
         });
-    } // 🎯 Structural Fix: Closes the 'for await...of' loop
 
-} catch (error) {
-    // 🎯 Structural Fix: Adds the required 'catch' block for error handling
-    console.error('Puter AI Streaming Error:', error);
-} // 🎯 Structural Fix: Closes the 'try' block
-    setSelectedChat(prevChat => {
-        const newMessages = [...prevChat.messages];
-        const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
-        
-        if (aiMsgIndex !== -1) {
-            // The function now safely uses the stable currentFullResponse value.
-            newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
-        }
-        
-        // Return the full new state object
-        return { ...prevChat, messages: newMessages };
-    });
-}
-        
+        // Update global chat list with error message
         setChats(prevChats =>
-          prevChats.map(chat =>
-            chat.id === selectedChat.id
-              ? { ...chat, messages: [...selectedChat.messages.slice(0, -1), { ...aiMessage, content: fullResponse }] }
-              : chat
-          )
+            prevChats.map(chat =>
+                chat.id === selectedChat.id
+                    ? { ...chat, messages: [...selectedChat.messages.slice(0, -1), { ...aiMessage, content: errorMessage }] }
+                    : chat
+            )
         );
-      }
-    } catch (error) {
-      console.error('Error:', error);
-      const errorMessage = 'Error: Unable to fetch response.';
-      setSelectedChat(prevChat => {
-        const newMessages = [...prevChat.messages];
-        const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessage.id);
-        if (aiMsgIndex !== -1) {
-          newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: errorMessage };
-        }
-        return { ...prevChat, messages: newMessages };
-      });
-      setChats(prevChats =>
-        prevChats.map(chat =>
-          chat.id === selectedChat.id
-            ? { ...chat, messages: [...selectedChat.messages.slice(0, -1), { ...aiMessage, content: errorMessage }] }
-            : chat
-        )
-      );
+        
     } finally {
-      setLoading(false);
-      scrollToBottom();
+        // 6. Final Cleanup
+        setLoading(false);
+        scrollToBottom();
     }
-  };
+};
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
