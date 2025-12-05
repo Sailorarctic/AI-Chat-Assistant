@@ -73,6 +73,3 @@ export default function ChatMessage({ message }) {
     </motion.div>
   ); // <--- This is the FINAL closing return character
 } // <--- This is the FINAL closing brace for the function
-    </motion.div>
-  );
-}
