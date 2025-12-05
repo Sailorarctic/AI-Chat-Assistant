@@ -101,14 +101,20 @@ const handleSend = async () => {
     // Check for necessary components and input
     if (!input.trim() || !selectedChat || !isPuterReady) return;
 
-    // Define messages, ensuring the AI role is 'assistant' for API compatibility
+    // 1. Define messages, ensuring the AI role is 'assistant' for API compatibility
     const userMessage = { id: uuidv4(), role: 'user', content: input };
-    const aiMessage = { id: uuidv4(), role: 'assistant', content: '' }; // 🎯 FIX: Changed 'ai' to 'assistant'
+    const aiMessage = { id: uuidv4(), role: 'assistant', content: '' }; 
     
-    // Create the history array for the API call (clean history + new user message)
-    const historyForAPI = [...selectedChat.messages, userMessage];
-    
-    // Update local state and global chats with the new user message and the blank aiMessage
+    // 2. Create the clean history array for the API call
+    //    We filter to ensure only valid 'user' and 'assistant' roles are sent.
+    const cleanHistory = selectedChat.messages.filter(msg => 
+        (msg.role === 'user' || msg.role === 'assistant') && msg.content.trim().length > 0
+    );
+
+    // Final array for the API: Clean History + New User Message
+    const historyForAPI = [...cleanHistory, userMessage];
+
+    // 3. Update local state with the new user message and the blank aiMessage (for streaming display)
     const updatedChat = {
         ...selectedChat,
         messages: [...selectedChat.messages, userMessage, aiMessage],
@@ -133,14 +139,14 @@ const handleSend = async () => {
     const errorMessage = 'Error: Unable to fetch response.';
 
     try {
-        // Use the clean history array for the API call
+        // 4. Send the clean history to the API
         const responseStream = await window.puter.ai.chat(historyForAPI, options);
         
         for await (const part of responseStream) {
             fullResponse += part?.text || '';
-            
             const currentFullResponse = fullResponse;
             
+            // Streaming update logic
             setSelectedChat(prevChat => {
                 const newMessages = [...prevChat.messages];
                 const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
@@ -148,7 +154,6 @@ const handleSend = async () => {
                 if (aiMsgIndex !== -1) {
                     newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
                 }
-                
                 return { ...prevChat, messages: newMessages };
             });
         }
@@ -157,7 +162,7 @@ const handleSend = async () => {
         setChats(prevChats =>
             prevChats.map(chat =>
                 chat.id === selectedChat.id
-                    ? { ...chat, messages: [...historyForAPI, { ...aiMessage, content: fullResponse }] }
+                    ? { ...chat, messages: [...cleanHistory, userMessage, { ...aiMessage, content: fullResponse }] }
                     : chat
             )
         );
@@ -170,7 +175,6 @@ const handleSend = async () => {
             const newMessages = [...prevChat.messages];
             const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
             if (aiMsgIndex !== -1) {
-                // Ensure the error message also uses the 'assistant' role for consistency if displayed
                 newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], role: 'assistant', content: errorMessage };
             }
             return { ...prevChat, messages: newMessages };
@@ -186,7 +190,9 @@ const handleSend = async () => {
         
     } finally {
         setLoading(false);
-        scrollToBottom();
+        // We need to trigger the style fix here for the blue bubbles!
+        // You'll need to update src/components/ChatMessage.js to check for 'assistant'
+        scrollToBottom(); 
     }
 };
 
