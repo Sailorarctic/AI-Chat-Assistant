@@ -143,21 +143,24 @@ const handleSend = async () => {
         const responseStream = await window.puter.ai.chat(historyForAPI, options);
         
         for await (const part of responseStream) {
-            // 🎯 FIX: Check if the part is a string, or if it has a 'text' property
+    // 1. Accumulate the text from the stream
     const chunk = (typeof part === 'string') ? part : part?.text || ''; 
     fullResponse += chunk;
-            
-            // Streaming update logic
-            setSelectedChat(prevChat => {
-                const newMessages = [...prevChat.messages];
-                const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
-                
-                if (aiMsgIndex !== -1) {
-                    newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
-                }
-                return { ...prevChat, messages: newMessages };
-            });
+
+    // 2. 🎯 FIX: Define the stable variable (currentFullResponse) BEFORE use
+    const currentFullResponse = fullResponse; 
+    
+    // 3. Update the state for streaming display
+    setSelectedChat(prevChat => {
+        const newMessages = [...prevChat.messages];
+        const aiMsgIndex = newMessages.findIndex(msg => msg.id === aiMessageId);
+        
+        if (aiMsgIndex !== -1) {
+            newMessages[aiMsgIndex] = { ...newMessages[aiMsgIndex], content: currentFullResponse };
         }
+        return { ...prevChat, messages: newMessages };
+    });
+}
         
         // Final Success State Update
         setChats(prevChats =>
