@@ -143,8 +143,9 @@ const handleSend = async () => {
         const responseStream = await window.puter.ai.chat(historyForAPI, options);
         
         for await (const part of responseStream) {
-            fullResponse += part;
-            const currentFullResponse = fullResponse;
+            // 🎯 FIX: Check if the part is a string, or if it has a 'text' property
+    const chunk = (typeof part === 'string') ? part : part?.text || ''; 
+    fullResponse += chunk;
             
             // Streaming update logic
             setSelectedChat(prevChat => {
