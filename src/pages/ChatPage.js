@@ -144,10 +144,18 @@ const handleSend = async () => {
         
         for await (const part of responseStream) {
     // 1. Accumulate the text from the stream
-    const chunk = (typeof part === 'string') ? part : part?.text || ''; 
+    // 🎯 FIX: Check for .content first, then .text, then fall back to string or empty.
+    let chunk = '';
+    if (typeof part === 'string') {
+        chunk = part;
+    } else {
+        // Check for the most common Anthropic/Puter stream keys
+        chunk = part?.content || part?.text || '';
+    }
+    
     fullResponse += chunk;
 
-    // 2. 🎯 FIX: Define the stable variable (currentFullResponse) BEFORE use
+    // 2. Define the stable variable
     const currentFullResponse = fullResponse; 
     
     // 3. Update the state for streaming display
